@@ -1,0 +1,37 @@
+version: "3.9"
+
+networks:
+  web:
+    name: web_net
+
+services:
+  apache:
+    image: wultur/apache:v{{ build_version }}
+    container_name: web_apache
+    volumes:
+      - ./volume/apache.gotdns.ch:/var/www/apache.gotdns.ch
+    networks:
+      - web
+
+  nginx:
+    image: wultur/nginx:v{{ build_version }}
+    container_name: web_nginx
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./volume/nginx.hopto.org:/var/www/nginx.hopto.org
+      - ./volume/nginx.ddnsking.com:/var/www/nginx.ddnsking.com
+      - ./volume/redserver:/var/www/redserver
+      - ./volume/blueserver:/var/www/blueserver
+    networks:
+      - web
+
+  php:
+    image: php:7.4-fpm-alpine
+    container_name: web_php
+    volumes:
+      - ./volume/apache.gotdns.ch:/var/www/apache.gotdns.ch
+      - ./volume/nginx.hopto.org:/var/www/nginx.hopto.org
+    networks:
+      - web

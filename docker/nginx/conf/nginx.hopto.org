@@ -1,0 +1,74 @@
+upstream redblue {
+    server localhost:8070;
+    server localhost:8090;
+}
+
+server {
+
+    root /var/www/nginx.hopto.org;
+    index index.php index.html index.htm;
+
+    server_name nginx.hopto.org;
+    location / {
+        try_files $uri $uri/ /index.php;
+    }
+
+    location = /redblue {
+        proxy_pass http://redblue/;
+    }
+
+    location /info {
+        proxy_pass  http://web_apache:8080/info.php;
+    }
+
+    location /king {
+        proxy_pass  http://nginx.ddnsking.com/;
+    }
+
+    location = /onliner {
+        proxy_pass http://onliner.by/;
+    }
+
+    location = /image1 {
+        rewrite /image1 /bike.jpg;
+    }
+
+    location = /image2 {
+        rewrite /image2 /car.png;
+    }
+
+    location ~ \.(jpg|jpeg)$ {
+        image_filter rotate 180;
+    }
+
+    location ~ \.mp3$ {
+        add_header Content-Disposition 'attachment; filename="$request_filename"';
+    }
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass web_php:9000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+    }
+
+    listen 443 ssl;               
+    ssl_certificate /etc/letsencrypt/live/nginx.hopto.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/nginx.hopto.org/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/nginx.hopto.org/chain.pem;
+
+}
+
+server {
+    if ($host = nginx.hopto.org) {
+        return 301 https://$host$request_uri;
+    }                 
+
+    listen 80 default_server;
+
+    server_name nginx.hopto.org;
+    return 404;                 
+}

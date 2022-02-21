@@ -1,0 +1,52 @@
+---
+- name: Install docker and run website on containers
+  hosts: all
+  become: true
+
+  vars:
+    src_folder: ./docker
+    dest_folder: /site
+    build_version: "{{ lookup('env', 'BUILD_NUMBER') }}"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Docker
+      apt: name=docker.io state=latest
+
+    - name: Install docker-compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-linux-x86_64
+        dest: /usr/bin/docker-compose
+        mode: +x
+
+    - name: Copy volumes with data of sites
+      copy:
+        src: "{{ src_folder }}/volume"
+        dest: "{{ dest_folder }}"
+        mode: 0555
+
+    - name: Generate docker-compose file on host
+      template:
+        src: "{{ src_folder }}/docker-compose.j2"
+        dest: "{{ dest_folder }}/docker-compose.yml"
+        mode: 0555
+      notify:
+        - Stop all containers
+        - Prune old images
+        - Start/restart containers
+
+  handlers:
+    - name: Stop all containers
+      shell:
+        chdir: "{{ dest_folder }}"
+        cmd: docker-compose down 
+    - name: Prune old images
+      shell:
+        cmd: docker images -a -q | xargs -r docker rmi -f
+    - name: Start/restart containers
+      shell:
+        chdir: "{{ dest_folder }}"
+        cmd: docker-compose up -d
